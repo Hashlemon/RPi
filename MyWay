@@ -1,0 +1,165 @@
+
+apt-get update
+
+apt-get install build-essential libssl-dev libffi-dev python3-dev python-dev raspi-config vim nginx // at raspi config: expand filesystem , change pass, SPI-I2C (enbl), GPU = 8
+
+sudo pip3 install virtualenv 
+
+cd /var/
+
+mkdir working
+
+cd working/
+
+virtualenv venv
+
+/var/working# . venv/bin/activate
+
+(venv) pip install rpi.gpio
+
+//apt-get install vim
+
+(venv) /var/working/# apt-get install git-core
+
+//git config --global user.name "Lowrence"
+
+//git config --global user.email arseni.yahorchanka@gmail.com
+
+git clone https://github.com/adafruit/Adafruit_Python_DHT.git
+
+cd /Adaf_DHT...
+
+python setup.py install
+
+
+(venv) lars@raspberrypi:/var/working/Adafruit_Python_DHT/examples $ 
+
+
+
+//Append the appropriate stanza to /etc/apt/sources.list.
+
+deb http://nginx.org/packages/debian/ squeeze nginx
+deb-src http://nginx.org/packages/debian/ squeeze nginx
+
+//
+
+apt-get install nginx
+
+/etc/init.d/nginx start //UP!
+
+/var/www $ sudo mkdir lab_app
+
+virtualenv venv   && . activate
+
+pip install flask
+
+nano hello.py //copy from source
+
+-------------
+from flask import Flask
+app = Flask(__name__)
+
+@app.route("/")
+def hello():
+    return "Hello World!"
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=8080)
+------------
+
+python hello.py // test flask on :8080
+
+/// install application server uWSGI ///
+
+pip install uwsgi
+
+cd /etc/nginx/sites-enabled/
+
+ls -la
+total 8
+drwxr-xr-x 2 root root 4096 Apr 19 18:10 .
+drwxr-xr-x 8 root root 4096 Apr 19 18:10 ..
+lrwxrwxrwx 1 root root   34 Apr 19 18:10 default -> /etc/nginx/sites-available/default
+
+sudo rm default
+
+(venv) lars@raspberrypi:/var/www/lab_app $ sudo nano lab_app_nginx.conf
+
+------------
+
+#Full path: /var/www/lab_app/lab_app_nginx.conf
+
+server {
+    listen      80;
+    server_name localhost;
+    charset     utf-8;
+    client_max_body_size 75M;
+
+    location /static {
+        root /var/www/lab_app/;
+    }
+
+    location / { try_files $uri @labapp; }
+    location @labapp {
+        include uwsgi_params;
+        uwsgi_pass unix:/var/www/lab_app/lab_app_uwsgi.sock;
+    }
+}
+
+------------
+
+ln -s /var/www/lab_app/lab_app_nginx.conf /etc/nginx/conf.d/   
+
+lars@raspberrypi:/etc/nginx/conf.d $ ls -la
+total 8
+drwxr-xr-x 2 root root 4096 Apr 19 18:56 .
+drwxr-xr-x 8 root root 4096 Apr 19 18:10 ..
+lrwxrwxrwx 1 root root   35 Apr 19 18:56 lab_app_nginx.conf -> /var/www/lab_app/lab_app_nginx.conf
+
+sudo /etc/init.d/nginx restart
+
+(venv) lars@raspberrypi:/var/www/lab_app $ sudo nano lab_app_uwsgi.ini
+
+--------------
+
+#Full path: /var/www/lab_app/lab_app_uwsgi.ini
+
+[uwsgi]
+#application's base folder
+base = /var/www/lab_app
+
+#python module to import
+app = hello
+module = %(app)
+
+home = %(base)/venv
+pythonpath = %(base)
+
+#socket file's location
+socket = /var/www/lab_app/%n.sock
+
+#permissions for the socket file
+chmod-socket    = 666
+
+#the variable that holds a flask application inside the module imported at line #6
+callable = app
+
+#location of log files
+logto = /var/log/uwsgi/%n.log
+
+-------------
+
+sudo mkdir /var/log/uwsgi
+
+uwsgi /var/www/lab_app/lab_app_uwsgi.ini
+
+
+
+
+
+
+
+
+
+
+
